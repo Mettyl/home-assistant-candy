@@ -1,8 +1,19 @@
+from unittest.mock import AsyncMock
+
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import pytest
 from pytest_homeassistant_custom_component.common import load_fixture
 
-from custom_components.candy.client import CandyClient, Encryption, detect_encryption
+from custom_components.candy.client import (
+    CandyClient,
+    Encryption,
+    build_washing_machine_pause_payload,
+    build_washing_machine_refresh_touch_payload,
+    build_washing_machine_start_payload,
+    build_washing_machine_stop_payload,
+    detect_encryption,
+    encode_write_payload,
+)
 from custom_components.candy.client.model import (
     DishwasherStatus,
     MachineState,
@@ -41,6 +52,278 @@ async def test_idle(hass, aioclient_mock):
     assert status.program_state is WashProgramState.STOPPED
     assert status.spin_speed == 800
     assert status.temp == 40
+    assert status.selection_level == 0
+
+
+def test_build_washing_machine_start_payload():
+    payload = build_washing_machine_start_payload(
+        program=7,
+        program_code=7,
+        selection_level=1,
+        temperature=30,
+        spin_speed=8,
+    )
+
+    assert payload == (
+        "Write=1&StSt=1&DelVl=0&PrNm=7&PrCode=7&TmpTgt=30&SLevTgt=1&SpdTgt=8"
+    )
+
+
+def test_build_washing_machine_start_payload_validates_values():
+    with pytest.raises(ValueError, match="selection_level"):
+        build_washing_machine_start_payload(
+            program=7,
+            program_code=7,
+            selection_level=256,
+        )
+
+
+def test_build_washing_machine_delayed_start_payload_uses_minutes():
+    payload = build_washing_machine_start_payload(
+        program=14,
+        program_code=65,
+        selection_level=1,
+        delay_minutes=435,
+    )
+
+    assert payload == "Write=1&StSt=1&DelVl=435&PrNm=14&PrCode=65&SLevTgt=1"
+
+
+def test_build_washing_machine_delayed_start_validates_minutes():
+    with pytest.raises(ValueError, match="delay_minutes"):
+        build_washing_machine_start_payload(
+            program=14,
+            program_code=65,
+            delay_minutes=1441,
+        )
+
+
+def test_build_washing_machine_stop_payload():
+    assert (
+        build_washing_machine_stop_payload(program=13)
+        == "Write=1&StSt=0&DelMd=0&PrNm=13"
+    )
+
+
+def test_build_washing_machine_pause_and_resume_payloads():
+    assert build_washing_machine_pause_payload(paused=True) == "Pa=1"
+    assert build_washing_machine_pause_payload(paused=False) == "Pa=0"
+
+
+def test_build_washing_machine_refresh_touch_payload():
+    assert build_washing_machine_refresh_touch_payload() == (
+        "Write=1&StSt=1&DelVl=0&PrNm=16&PrCode=41&TmpTgt=0&"
+        "SLevTgt=0&SpdTgt=0&DispTestOn=1"
+    )
+
+
+def test_encode_write_payload_round_trip():
+    payload = "Write=1&StSt=0&PrNm=7"
+
+    encrypted_hex = encode_write_payload(payload, TEST_ENCRYPTION_KEY)
+
+    encrypted = bytes.fromhex(encrypted_hex)
+    key = TEST_ENCRYPTION_KEY.encode()
+    decrypted = bytes(
+        byte ^ key[index % len(key)] for index, byte in enumerate(encrypted)
+    )
+    assert decrypted.decode() == payload
+
+
+async def test_encrypted_write(hass, aioclient_mock):
+    payload = "Write=1&StSt=0&PrNm=7"
+    request_data = encode_write_payload(payload, TEST_ENCRYPTION_KEY)
+    response_data = encode_write_payload('{"response":"SUCCESS"}', TEST_ENCRYPTION_KEY)
+    aioclient_mock.get(
+        f"http://{TEST_IP}/http-write.json?encrypted=1&data={request_data}",
+        text=response_data,
+    )
+    client = CandyClient(
+        async_get_clientsession(hass),
+        device_ip=TEST_IP,
+        encryption_key=TEST_ENCRYPTION_KEY,
+        use_encryption=True,
+    )
+
+    response = await client._write(payload)
+
+    assert response == {"response": "SUCCESS"}
+
+
+async def test_unencrypted_write(hass, aioclient_mock):
+    payload = "Write=1&StSt=0&PrNm=7"
+    aioclient_mock.get(
+        f"http://{TEST_IP}/http-write.json?encrypted=0&Write=1&StSt=0&PrNm=7",
+        json={"response": "SUCCESS"},
+    )
+    client = CandyClient(
+        async_get_clientsession(hass),
+        device_ip=TEST_IP,
+        encryption_key="",
+        use_encryption=False,
+    )
+
+    response = await client._write(payload)
+
+    assert response == {"response": "SUCCESS"}
+
+
+async def test_encrypted_write_accepts_empty_response(hass, aioclient_mock):
+    payload = "Write=1&StSt=1&PrNm=7&PrCode=7"
+    request_data = encode_write_payload(payload, TEST_ENCRYPTION_KEY)
+    aioclient_mock.get(
+        f"http://{TEST_IP}/http-write.json?encrypted=1&data={request_data}",
+        text="",
+    )
+    client = CandyClient(
+        async_get_clientsession(hass),
+        device_ip=TEST_IP,
+        encryption_key=TEST_ENCRYPTION_KEY,
+        use_encryption=True,
+    )
+
+    response = await client._write(payload)
+
+    assert response == {"response": "NO_RESPONSE"}
+
+
+async def test_start_requires_remote_control(hass):
+    status = WashingMachineStatus.from_json(
+        {
+            "WiFiStatus": "0",
+            "MachMd": "1",
+            "Pr": "7",
+            "PrPh": "0",
+            "PrCode": "7",
+            "SLevel": "1",
+            "Temp": "30",
+            "SpinSp": "8",
+            "RemTime": "840",
+        }
+    )
+    client = CandyClient(
+        async_get_clientsession(hass),
+        device_ip=TEST_IP,
+        encryption_key=TEST_ENCRYPTION_KEY,
+        use_encryption=True,
+    )
+    client.status = AsyncMock(return_value=status)
+
+    with pytest.raises(ValueError, match="Remote control is disabled"):
+        await client.start_washing_machine(program=7, program_code=7)
+
+
+async def test_refresh_touch_requires_completed_wash(hass):
+    status = WashingMachineStatus.from_json(
+        {
+            "WiFiStatus": "1",
+            "MachMd": "1",
+            "Pr": "14",
+            "PrPh": "0",
+            "PrCode": "65",
+            "SLevel": "3",
+            "Temp": "60",
+            "SpinSp": "10",
+            "RemTime": "0",
+        }
+    )
+    client = CandyClient(
+        async_get_clientsession(hass),
+        device_ip=TEST_IP,
+        encryption_key=TEST_ENCRYPTION_KEY,
+        use_encryption=True,
+    )
+    client.status = AsyncMock(return_value=status)
+
+    with pytest.raises(ValueError, match="only available after a completed wash"):
+        await client.start_refresh_touch()
+
+
+async def test_refresh_touch_sends_observed_command(hass):
+    status = WashingMachineStatus.from_json(
+        {
+            "WiFiStatus": "1",
+            "MachMd": "7",
+            "Pr": "14",
+            "PrPh": "0",
+            "PrCode": "0",
+            "SLevel": "3",
+            "Temp": "60",
+            "SpinSp": "10",
+            "RemTime": "240",
+        }
+    )
+    client = CandyClient(
+        async_get_clientsession(hass),
+        device_ip=TEST_IP,
+        encryption_key=TEST_ENCRYPTION_KEY,
+        use_encryption=True,
+    )
+    client.status = AsyncMock(return_value=status)
+    client._write = AsyncMock(return_value={"response": "SUCCESS"})
+
+    response = await client.start_refresh_touch()
+
+    assert response == {"response": "SUCCESS"}
+    client._write.assert_awaited_once_with(
+        build_washing_machine_refresh_touch_payload()
+    )
+
+
+async def test_pause_requires_running_state_and_sends_official_command(hass):
+    running = WashingMachineStatus.from_json(
+        {
+            "WiFiStatus": "1",
+            "MachMd": "2",
+            "Pr": "7",
+            "PrPh": "2",
+            "PrCode": "7",
+            "SLevel": "1",
+            "Temp": "30",
+            "SpinSp": "8",
+            "RemTime": "840",
+        }
+    )
+    client = CandyClient(
+        async_get_clientsession(hass),
+        device_ip=TEST_IP,
+        encryption_key=TEST_ENCRYPTION_KEY,
+        use_encryption=True,
+    )
+    client.status = AsyncMock(return_value=running)
+    client._write = AsyncMock(return_value={"response": "SUCCESS"})
+
+    await client.pause_washing_machine()
+
+    client._write.assert_awaited_once_with("Pa=1")
+
+
+async def test_resume_requires_paused_state_and_sends_official_command(hass):
+    paused = WashingMachineStatus.from_json(
+        {
+            "WiFiStatus": "1",
+            "MachMd": "3",
+            "Pr": "7",
+            "PrPh": "2",
+            "PrCode": "7",
+            "SLevel": "1",
+            "Temp": "30",
+            "SpinSp": "8",
+            "RemTime": "840",
+        }
+    )
+    client = CandyClient(
+        async_get_clientsession(hass),
+        device_ip=TEST_IP,
+        encryption_key=TEST_ENCRYPTION_KEY,
+        use_encryption=True,
+    )
+    client.status = AsyncMock(return_value=paused)
+    client._write = AsyncMock(return_value={"response": "SUCCESS"})
+
+    await client.resume_washing_machine()
+
+    client._write.assert_awaited_once_with("Pa=0")
 
 
 async def test_delayed_start_wait(hass, aioclient_mock):

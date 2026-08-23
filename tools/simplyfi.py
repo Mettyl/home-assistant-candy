@@ -86,15 +86,33 @@ def xor_string(data: bytes, key: str) -> str:
         decrypted.append(b ^ key_bytes[i % len(key_bytes)])
     return decrypted.decode('utf-8', errors='ignore')
 
+def encode_write_payload(payload: str, key: str) -> str:
+    """Encode a write payload using the device's repeating-key XOR cipher."""
+    payload_bytes = payload.encode('utf-8')
+    key_bytes = key.encode('utf-8')
+    if not key_bytes:
+        return payload_bytes.hex()
+    encrypted = bytearray()
+    for i, byte in enumerate(payload_bytes):
+        encrypted.append(byte ^ key_bytes[i % len(key_bytes)])
+    return encrypted.hex()
+
 def show_header(error: bool = False):
     out = sys.stderr if error else sys.stdout
     print("## Candy Simply-Fi tool by Melvin Groenendaal ## (Python Port)", file=out)
 
 def main():
+    if len(sys.argv) == 5 and sys.argv[3] == "encode":
+        payload = sys.argv[4]
+        print(f"Payload: {payload}")
+        print(f"Encrypted data: {encode_write_payload(payload, sys.argv[2])}")
+        return
+
     if (len(sys.argv) == 3 and sys.argv[2] != "getkey") or len(sys.argv) < 3 or len(sys.argv) > 4:
         show_header(True)
         print(f"Usage to retreive key: {sys.argv[0]} <ip> getkey", file=sys.stderr)
         print(f"Usage to get data    : {sys.argv[0]} <ip> <key> <method: config, getStatistics, read>", file=sys.stderr)
+        print(f"Usage to encode only : {sys.argv[0]} <ip> <key> encode '<payload>'", file=sys.stderr)
         sys.exit(-1)
 
     if sys.argv[2] == "getkey":

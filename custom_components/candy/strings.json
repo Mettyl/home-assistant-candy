@@ -22,7 +22,57 @@
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Experimental appliance controls",
+        "description": "Enable write commands only if the appliance is exactly Candy RO41274DWMSE/1-S. Commands for other models have not been verified and may be unsafe.",
+        "data": {
+          "enable_wash_control": "Enable controls for RO41274DWMSE/1-S"
+        }
+      }
+    }
+  },
   "entity": {
+    "button": {
+      "wash_start": {
+        "name": "Start wash"
+      },
+      "wash_schedule": {
+        "name": "Schedule wash"
+      },
+      "wash_stop": {
+        "name": "Stop wash"
+      },
+      "wash_pause": {
+        "name": "Pause wash"
+      },
+      "wash_resume": {
+        "name": "Resume wash"
+      },
+      "wash_refresh_touch": {
+        "name": "Start Refresh Touch"
+      }
+    },
+    "select": {
+      "wash_program_control": {
+        "name": "Wash program"
+      },
+      "wash_temperature_control": {
+        "name": "Wash temperature"
+      },
+      "wash_spin_speed_control": {
+        "name": "Wash spin speed"
+      },
+      "wash_soil_level_control": {
+        "name": "Wash soil level"
+      }
+    },
+    "time": {
+      "wash_delay_control": {
+        "name": "Scheduled start time"
+      }
+    },
     "sensor": {
       "washing_machine": {
         "name": "Washing machine"

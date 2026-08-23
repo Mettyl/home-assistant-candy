@@ -103,6 +103,11 @@ def decrypt(key: bytes, encrypted_response: bytes) -> bytes:
     return bytes(decrypted)
 
 
+def encrypt(key: bytes, plaintext: bytes) -> bytes:
+    """Encrypt a Simply-Fi payload using the symmetric repeating-key XOR."""
+    return decrypt(key, plaintext)
+
+
 def _is_valid_json(decrypted: bytes) -> bool:
     try:
         json.loads(decrypted)

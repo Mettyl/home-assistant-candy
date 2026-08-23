@@ -1,129 +1,114 @@
-# Candy Home Assistant Component
+# Candy Home Assistant integration
 
-[![Run tests](https://github.com/bigmoby/home-assistant-candy/actions/workflows/lint.yml/badge.svg)](https://github.com/bigmoby/home-assistant-candy/actions/workflows/lint.yml)
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![Run tests](https://github.com/Mettyl/home-assistant-candy/actions/workflows/lint.yml/badge.svg)](https://github.com/Mettyl/home-assistant-candy/actions/workflows/lint.yml)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz/)
 
-[![Donate](https://img.shields.io/badge/donate-BuyMeCoffee-yellow.svg)](https://www.buymeacoffee.com/bigmoby)
+An unofficial custom integration for locally connected Candy, Haier, and
+Simply-Fi appliances. It reads appliance status directly over the local
+network and can automatically determine the local protocol's encryption key
+during setup.
 
-A highly optimized custom component for [Home Assistant](https://homeassistant.io) that effortlessly integrates Candy, Haier, and Simply-Fi connected home appliances.
+This fork is based on
+[bigmoby/home-assistant-candy](https://github.com/bigmoby/home-assistant-candy),
+which is based on
+[ofalvai/home-assistant-candy](https://github.com/ofalvai/home-assistant-candy).
 
-Fully compliant with strictly-typed Home Assistant (>= 2024.x) development standards, it features **Zero-Configuration Automatic Decryption**—making setup purely plug-and-play.
+> [!IMPORTANT]
+> This project is not affiliated with, endorsed by, or supported by Candy,
+> Haier, or their related companies. Write controls are experimental and have
+> only been verified on the exact washing-machine model stated below. Use them
+> at your own risk and never bypass the appliance's physical safety features.
 
----
+## Features
 
-## ✨ Features
+- Local polling for washing machines, tumble dryers, dishwashers, and ovens.
+- Automatic discovery and encryption detection during setup.
+- Native Home Assistant sensors for state, cycle, remaining time, and
+  appliance-specific values.
+- Optional local controls verified on **Candy RO41274DWMSE/1-S**:
+  - program, temperature, spin-speed, and supported soil-level selection;
+  - start now or at a selected wall-clock time;
+  - stop, pause, and resume;
+  - post-cycle Refresh Touch.
 
-- **Supported appliances**:
-  - 🧺 Washing Machine
-  - 🌫️ Tumble Dryer
-  - 🔪 Dishwasher
-  - 🍳 Oven
-- **Zero-Config Decryption:** Say goodbye to manually extracting encryption keys. This integration boasts a natively built-in *sliding-window/known-plaintext* algorithm that unlocks your device seamlessly in fractions of a second during setup.
-- **Strict HA Compatibility:** Follows the rigorous MyPy styling standards enforced by Home Assistant 2025.
-- Uses the local device API for real-time responsiveness.
-- Creates dedicated, native semantic sensors (e.g., remaining time, current status, machine cycle) and exposes granular information cleanly as sensor attributes.
+Controls are disabled by default. The read-only integration remains available
+for other supported appliances.
 
----
+## Installation
 
-## 🛠️ Installation
+### HACS custom repository
 
-### Method 1: HACS (Recommended)
-1. Install [HACS](https://hacs.xyz/).
-2. Go to the HACS integrations page, search for `Candy Simply-Fi` and download it.
-3. Restart Home Assistant.
-4. Go to **Settings > Devices & Services**, click **Add integration** and search for `Candy`.
-5. Enter the **IP Address** of your appliance.
-6. The integration will automatically authenticate, decrypt if necessary, and assign the appliance to your dashboard!
+1. Install [HACS](https://hacs.xyz/docs/use/).
+2. In HACS, open **Integrations**, then the menu and **Custom repositories**.
+3. Add `https://github.com/Mettyl/home-assistant-candy` with category
+   **Integration**.
+4. Find **Candy Simply-Fi**, download it, and restart Home Assistant.
+5. Go to **Settings → Devices & services → Add integration**, search for
+   **Candy**, and enter or select the appliance IP address.
 
-### Method 2: Manual
-1. Copy the `custom_components/candy` folder into your Home Assistant's `custom_components` directory.
-2. Restart Home Assistant and add `Candy` via the UI.
+### Manual
 
----
+Copy `custom_components/candy` into the `custom_components` directory of your
+Home Assistant configuration, restart Home Assistant, and add **Candy** from
+**Settings → Devices & services**.
 
-## 🚀 Built-in Debugging Tool
+## Enabling washing-machine controls
 
-Are you a developer, or do you want to inspect what raw JSON your specific appliance is throwing over your network? We've got you covered:
+Only do this for **Candy RO41274DWMSE/1-S**:
 
-Inside the `tools/` folder of this repository, you'll find the standalone `simplyfi.py` script. You can run it effortlessly from any terminal independent from Home Assistant!
+1. Open **Settings → Devices & services → Candy**.
+2. Open **Configure** on the integration entry.
+3. Read the warning and enable controls for `RO41274DWMSE/1-S`.
+4. Reload the integration if Home Assistant does not do so automatically.
+
+The appliance must still be placed in its physical remote-control mode. Home
+Assistant cannot safely override the door lock, selector, or other hardware
+interlocks. A scheduled start is sent to the appliance as a local delay, so it
+continues even if Home Assistant later restarts.
+
+## Standalone debugging tool
+
+The helper in `tools/simplyfi.py` can inspect the same local API without Home
+Assistant:
 
 ```bash
-python3 tools/simplyfi.py <YOUR_APPLIANCE_IP_ADDRESS>
+# Discover the local encryption key
+python3 tools/simplyfi.py <APPLIANCE_IP> getkey
+
+# Read the current appliance status
+python3 tools/simplyfi.py <APPLIANCE_IP> <ENCRYPTION_KEY> read
 ```
 
-This is incredibly useful for validating your appliance network reachability or diagnosing new payloads.
+Treat the encryption key as a password: do not paste it into issues, logs, or
+commits. Status responses may also contain device-specific information, so
+review them before publishing.
 
----
+## Development
 
-## 🔍 Finding Your Appliance on the Network
-
-Not sure what IP address your Candy appliance has? Run this one-liner from any terminal on the **same local network** as your device.
-
-> **Prerequisite:** replace `192.168.1` with your actual subnet if different (check your router settings).
+The development scripts target Linux or WSL. From the repository root:
 
 ```bash
-# Scan the entire subnet for Candy Simply-Fi appliances
-for i in $(seq 1 254); do
-  result=$(curl -s --max-time 1 "http://192.168.1.$i/http-read.json?encrypted=0" 2>/dev/null)
-  [ -n "$result" ] && echo "192.168.1.$i: $result"
-done
+make setup         # Create/update the development environment
+make develop       # Start a local Home Assistant development instance
+make check         # Ruff, mypy, and all tests
+make lint          # Ruff and mypy only
+make format        # Format integration and test code
+make test          # Run tests
+make test-coverage # Run tests with a coverage report
+make clean         # Remove caches, build output, and the virtual environment
 ```
 
-The script probes every host on the subnet for the Candy local API endpoint. Any appliance that responds will print its IP address alongside its raw JSON status — for example:
+Please open bugs and model-support requests in this fork's
+[issue tracker](https://github.com/Mettyl/home-assistant-candy/issues). For a
+new model, include a redacted status response and explain which physical state
+or setting each observed value represents. Do not enable write controls for an
+unverified model.
 
-```
-192.168.1.79: { "statusLavatrice": { "WiFiStatus": "1", ... } }
-```
+## License and attribution
 
-Use that IP when configuring the integration in Home Assistant.
+Distributed under the [MIT License](LICENSE.md). Original copyright and
+upstream attribution are preserved there.
 
----
-
-## 🙋 My device isn't supported. Can you help?
-
-Absolutely! If you have an appliance that is not supported yet (or you notice odd readings), head over to the [Discussions section](https://github.com/bigmoby/home-assistant-candy/discussions/categories/device-support-improvements). Open a new thread or comment to an existing one with the following information:
-
-1. The raw status API response of your device (Please use the provided `tools/simplyfi.py` inside this repo to query your IP and get the full JSON).
-2. A brief, intuitive explanation of what you think each field correlates to based on the machine's state (e.g., _The `SpinSp` field reads "8", meaning Spin speed 800 RPM in my model_).
-
----
-
-## 👨‍💻 Develop
-
-If you want to contribute, test features or build new integrations, the environment is fully automated.
-
-### Quick Start
-Setup the development environment using our rapid bash scripts:
-```bash
-make setup
-```
-
-### Available Commands
-Use the `Makefile` for all standard operations:
-```bash
-make setup         # Setup development environment and venv
-make check         # Run all checks (lint + test)
-make lint          # Run ruff spacing and mypy static type checking
-make format        # Format python code to meet standard
-make test          # Run tests with coverage
-make clean         # Deep clean cache folders
-```
-
-### Development Tools (Pre-Commit)
-We rely on Github rigorous standards to maintain 100% Home Assistant compliance.
-You can install our native pre-commit hooks that format and protect every single push:
-```bash
-make pre-commit-install
-```
-
----
-
-## Sponsor
-
-Please, if You want support this kind of projects:
-
-<a href="https://www.buymeacoffee.com/bigmoby" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
-
-Many Thanks,
-
-Fabio Mauro
+Special thanks to [Oliver Falvai](https://github.com/ofalvai) for the original
+integration and to [Fabio Mauro](https://github.com/bigmoby) for the upstream
+fork and its continued development.

@@ -1,6 +1,7 @@
 MIT License
 
 Copyright (c) 2026 Fabio Mauro
+Copyright (c) 2026 Mettyl contributors
 
 Based on https://github.com/ofalvai/home-assistant-candy
 

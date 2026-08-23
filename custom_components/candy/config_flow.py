@@ -10,12 +10,18 @@ from homeassistant import config_entries
 from homeassistant.components.network import async_get_source_ip
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import voluptuous as vol
 
 from .client import detect_encryption, discover_devices
 from .client.decryption import Encryption
-from .const import CONF_INTEGRATION_TITLE, CONF_KEY_USE_ENCRYPTION, DOMAIN
+from .const import (
+    CONF_ENABLE_WASH_CONTROL,
+    CONF_INTEGRATION_TITLE,
+    CONF_KEY_USE_ENCRYPTION,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +49,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
     def __init__(self) -> None:
         """Initialise config flow."""
         self._discovered: dict[str, str] = {}  # ip -> device type label
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        _config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Return the options flow for model-specific controls."""
+        return CandyOptionsFlow()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -133,3 +147,28 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             config_data[CONF_PASSWORD] = ""
 
         return self.async_create_entry(title=CONF_INTEGRATION_TITLE, data=config_data)
+
+
+class CandyOptionsFlow(config_entries.OptionsFlow):
+    """Configure explicitly enabled, model-specific appliance controls."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage Candy integration options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_ENABLE_WASH_CONTROL,
+                        default=self.config_entry.options.get(
+                            CONF_ENABLE_WASH_CONTROL, False
+                        ),
+                    ): bool
+                }
+            ),
+        )

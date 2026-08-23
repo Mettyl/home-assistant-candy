@@ -1,12 +1,18 @@
 """Constants for the Candy integration."""
 
 DOMAIN = "candy"
-PLATFORMS = ["sensor"]
+PLATFORMS = ["sensor", "select", "time", "button"]
 
 DATA_KEY_COORDINATOR = "coordinator"
+DATA_KEY_CLIENT = "client"
+DATA_KEY_WASH_CONTROL = "wash_control"
 
 CONF_INTEGRATION_TITLE = "Candy"
 CONF_KEY_USE_ENCRYPTION = "use_encryption"
+CONF_ENABLE_WASH_CONTROL = "enable_wash_control"
+
+WASH_REFRESH_TOUCH_PROGRAM = 16
+WASH_REFRESH_TOUCH_PROGRAM_CODE = 41
 
 UNIQUE_ID_WASHING_MACHINE = "{0}-washing_machine"
 UNIQUE_ID_WASH_PROGRAM = "{0}-wash_program"
@@ -20,6 +26,17 @@ UNIQUE_ID_WASH_DELAY = "{0}-wash_delay"
 UNIQUE_ID_WASH_NTC_WATER = "{0}-wash_ntc_water"
 UNIQUE_ID_WASH_NTC_DRUM = "{0}-wash_ntc_drum"
 UNIQUE_ID_WASH_MOTOR_FREQ = "{0}-wash_motor_freq"
+UNIQUE_ID_WASH_PROGRAM_CONTROL = "{0}-wash_program_control"
+UNIQUE_ID_WASH_TEMPERATURE_CONTROL = "{0}-wash_temperature_control"
+UNIQUE_ID_WASH_SPIN_SPEED_CONTROL = "{0}-wash_spin_speed_control"
+UNIQUE_ID_WASH_SOIL_LEVEL_CONTROL = "{0}-wash_soil_level_control"
+UNIQUE_ID_WASH_DELAY_CONTROL = "{0}-wash_delay_control"
+UNIQUE_ID_WASH_START = "{0}-wash_start"
+UNIQUE_ID_WASH_SCHEDULE = "{0}-wash_schedule"
+UNIQUE_ID_WASH_STOP = "{0}-wash_stop"
+UNIQUE_ID_WASH_PAUSE = "{0}-wash_pause"
+UNIQUE_ID_WASH_RESUME = "{0}-wash_resume"
+UNIQUE_ID_WASH_REFRESH_TOUCH = "{0}-wash_refresh_touch"
 
 UNIQUE_ID_TUMBLE_DRYER = "{0}-tumble_dryer"
 UNIQUE_ID_TUMBLE_PROGRAM = "{0}-tumble_program"
