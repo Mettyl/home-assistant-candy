@@ -19,6 +19,7 @@ from .const import (
     DEVICE_NAME_WASHING_MACHINE,
     DOMAIN,
     SUGGESTED_AREA_BATHROOM,
+    UNIQUE_ID_WASH_EXTRA_RINSES_CONTROL,
     UNIQUE_ID_WASH_PROGRAM_CONTROL,
     UNIQUE_ID_WASH_SOIL_LEVEL_CONTROL,
     UNIQUE_ID_WASH_SPIN_SPEED_CONTROL,
@@ -26,7 +27,9 @@ from .const import (
 )
 from .control import (
     DEFAULT_OPTION,
+    EXTRA_RINSE_OPTIONS,
     SOIL_LEVEL_OPTIONS,
+    WASH_OPTION_RINSE_MASK,
     WASH_PROGRAMS,
     WashControlState,
     spin_speed_option,
@@ -52,6 +55,7 @@ async def async_setup_entry(
             CandyWashTemperatureSelect(coordinator, config_entry.entry_id, control),
             CandyWashSpinSpeedSelect(coordinator, config_entry.entry_id, control),
             CandyWashSoilLevelSelect(coordinator, config_entry.entry_id, control),
+            CandyWashExtraRinsesSelect(coordinator, config_entry.entry_id, control),
         ]
     )
 
@@ -181,4 +185,33 @@ class CandyWashSoilLevelSelect(CandyWashControlSelect):
 
     async def async_select_option(self, option: str) -> None:
         self.control.select_soil_level(option)
+        self.async_write_ha_state()
+
+
+class CandyWashExtraRinsesSelect(CandyWashControlSelect):
+    """Select one mutually exclusive extra-rinse count."""
+
+    _attr_translation_key = "wash_extra_rinses_control"
+    _attr_icon = "mdi:cup-water"
+
+    @property
+    def unique_id(self) -> str:
+        return UNIQUE_ID_WASH_EXTRA_RINSES_CONTROL.format(self.config_id)
+
+    @property
+    def available(self) -> bool:
+        return super().available and bool(
+            self.control.preset.supported_option_mask & WASH_OPTION_RINSE_MASK
+        )
+
+    @property
+    def options(self) -> list[str]:
+        return list(EXTRA_RINSE_OPTIONS)
+
+    @property
+    def current_option(self) -> str:
+        return self.control.extra_rinse_option
+
+    async def async_select_option(self, option: str) -> None:
+        self.control.select_extra_rinses(option)
         self.async_write_ha_state()

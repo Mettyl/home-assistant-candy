@@ -10,6 +10,26 @@ COLD_OPTION = "Cold"
 NO_SPIN_OPTION = "No spin"
 SOIL_LEVEL_OPTIONS = {1: "Light", 2: "Normal", 3: "Heavy"}
 
+# OptMsk1 bit values used by the Simply-Fi app. Program-specific availability
+# below was observed on Candy RO41274DWMSE/1-S and must not be generalized to
+# other models.
+WASH_OPTION_PRE_WASH = 1
+WASH_OPTION_HYGIENE = 2
+WASH_OPTION_ANTI_CREASE = 4
+WASH_OPTION_GOOD_NIGHT = 8
+WASH_OPTION_RINSE_1 = 16
+WASH_OPTION_RINSE_2 = 32
+WASH_OPTION_RINSE_3 = 64
+WASH_OPTION_AQUAPLUS = 128
+WASH_OPTION_RINSE_MASK = WASH_OPTION_RINSE_1 | WASH_OPTION_RINSE_2 | WASH_OPTION_RINSE_3
+
+EXTRA_RINSE_OPTIONS = {
+    DEFAULT_OPTION: 0,
+    "+1 rinse": WASH_OPTION_RINSE_1,
+    "+2 rinses": WASH_OPTION_RINSE_2,
+    "+3 rinses": WASH_OPTION_RINSE_3,
+}
+
 
 @dataclass(frozen=True)
 class WashProgramPreset:
@@ -24,16 +44,57 @@ class WashProgramPreset:
     temperatures: tuple[int, ...]
     spin_speeds: tuple[int, ...]
     soil_levels: tuple[int, ...] = ()
+    supported_option_mask: int = 0
 
 
 # Only recipes observed on the user's RO41274DWMSE/1-S are included. Program
 # codes differ between Candy families, so unverified selector positions must not
 # be guessed here.
 WASH_PROGRAMS: tuple[WashProgramPreset, ...] = (
-    WashProgramPreset("Special 39'", 1, 136, 1, 30, 8, (0, 20, 30, 40), (0, 4, 6, 8)),
-    WashProgramPreset("Rapid 14'", 7, 7, 1, 30, 8, (0, 20, 30), (0, 4, 6, 8)),
-    WashProgramPreset("Rapid 30'", 7, 7, 2, 30, 8, (0, 20, 30), (0, 4, 6, 8)),
-    WashProgramPreset("Rapid 44'", 7, 7, 3, 30, 8, (0, 20, 30, 40), (0, 4, 6, 8)),
+    WashProgramPreset(
+        "Special 39'",
+        1,
+        136,
+        1,
+        30,
+        8,
+        (0, 20, 30, 40),
+        (0, 4, 6, 8),
+        supported_option_mask=WASH_OPTION_RINSE_MASK | WASH_OPTION_AQUAPLUS,
+    ),
+    WashProgramPreset(
+        "Rapid 14'",
+        7,
+        7,
+        1,
+        30,
+        8,
+        (0, 20, 30),
+        (0, 4, 6, 8),
+        supported_option_mask=WASH_OPTION_RINSE_MASK | WASH_OPTION_AQUAPLUS,
+    ),
+    WashProgramPreset(
+        "Rapid 30'",
+        7,
+        7,
+        2,
+        30,
+        8,
+        (0, 20, 30),
+        (0, 4, 6, 8),
+        supported_option_mask=WASH_OPTION_RINSE_MASK | WASH_OPTION_AQUAPLUS,
+    ),
+    WashProgramPreset(
+        "Rapid 44'",
+        7,
+        7,
+        3,
+        30,
+        8,
+        (0, 20, 30, 40),
+        (0, 4, 6, 8),
+        supported_option_mask=WASH_OPTION_RINSE_MASK | WASH_OPTION_AQUAPLUS,
+    ),
     WashProgramPreset(
         "Synthetics",
         11,
@@ -44,9 +105,36 @@ WASH_PROGRAMS: tuple[WashProgramPreset, ...] = (
         (0, 20, 30, 40, 60),
         (0, 4, 6, 8, 10),
         (1, 2, 3),
+        WASH_OPTION_PRE_WASH
+        | WASH_OPTION_ANTI_CREASE
+        | WASH_OPTION_GOOD_NIGHT
+        | WASH_OPTION_RINSE_MASK
+        | WASH_OPTION_AQUAPLUS,
     ),
-    WashProgramPreset("20 °C", 12, 11, 2, 20, 10, (20,), (0, 4, 6, 8, 10)),
-    WashProgramPreset("Eco 40-60", 13, 2, 3, 0, 12, (40, 60), (0, 4, 6, 8, 10, 12)),
+    WashProgramPreset(
+        "20 °C",
+        12,
+        11,
+        2,
+        20,
+        10,
+        (20,),
+        (0, 4, 6, 8, 10),
+        supported_option_mask=WASH_OPTION_GOOD_NIGHT
+        | WASH_OPTION_RINSE_MASK
+        | WASH_OPTION_AQUAPLUS,
+    ),
+    WashProgramPreset(
+        "Eco 40-60",
+        13,
+        2,
+        3,
+        0,
+        12,
+        (40, 60),
+        (0, 4, 6, 8, 10, 12),
+        supported_option_mask=WASH_OPTION_RINSE_MASK,
+    ),
     WashProgramPreset(
         "Cotton",
         14,
@@ -57,6 +145,11 @@ WASH_PROGRAMS: tuple[WashProgramPreset, ...] = (
         (0, 20, 30, 40, 60, 90),
         (0, 4, 6, 8, 10, 12),
         (1, 2, 3),
+        WASH_OPTION_PRE_WASH
+        | WASH_OPTION_HYGIENE
+        | WASH_OPTION_GOOD_NIGHT
+        | WASH_OPTION_RINSE_MASK
+        | WASH_OPTION_AQUAPLUS,
     ),
 )
 
@@ -81,6 +174,7 @@ class WashControlState:
         self.temperature: int | None = None
         self.spin_speed: int | None = None
         self.soil_level: int | None = None
+        self.option_mask = 0
         self.scheduled_start_time: time | None = None
         self.dirty = False
 
@@ -129,6 +223,7 @@ class WashControlState:
         self.temperature = None
         self.spin_speed = None
         self.soil_level = None
+        self.option_mask = 0
         self.dirty = True
 
     @property
@@ -199,6 +294,41 @@ class WashControlState:
     def select_start_time(self, value: time) -> None:
         """Set the wall-clock time used by the separate schedule button."""
         self.scheduled_start_time = value.replace(second=0, microsecond=0)
+        self.dirty = True
+
+    def supports_option(self, option: int) -> bool:
+        """Return whether the selected program supports an option bit."""
+        return bool(self.preset.supported_option_mask & option)
+
+    def set_option(self, option: int, enabled: bool) -> None:
+        """Enable or disable a verified independent washing option."""
+        if not self.supports_option(option):
+            raise ValueError(f"Option {option} is not available for {self.preset.name}")
+        if enabled:
+            self.option_mask |= option
+        else:
+            self.option_mask &= ~option
+        self.dirty = True
+
+    @property
+    def extra_rinse_option(self) -> str:
+        """Return the selected mutually exclusive extra-rinse option."""
+        selected = self.option_mask & WASH_OPTION_RINSE_MASK
+        return next(
+            (
+                label
+                for label, value in EXTRA_RINSE_OPTIONS.items()
+                if value == selected
+            ),
+            DEFAULT_OPTION,
+        )
+
+    def select_extra_rinses(self, option: str) -> None:
+        """Select one verified extra-rinse count."""
+        value = EXTRA_RINSE_OPTIONS[option]
+        if value and not self.supports_option(value):
+            raise ValueError(f"Extra rinses are not available for {self.preset.name}")
+        self.option_mask = (self.option_mask & ~WASH_OPTION_RINSE_MASK) | value
         self.dirty = True
 
 

@@ -66,6 +66,26 @@
       },
       "wash_soil_level_control": {
         "name": "Wash soil level"
+      },
+      "wash_extra_rinses_control": {
+        "name": "Extra rinses"
+      }
+    },
+    "switch": {
+      "wash_pre_wash": {
+        "name": "Pre Wash"
+      },
+      "wash_hygiene": {
+        "name": "Hygiene"
+      },
+      "wash_anti_crease": {
+        "name": "Anti Crease"
+      },
+      "wash_good_night": {
+        "name": "Good Night"
+      },
+      "wash_aquaplus": {
+        "name": "Aquaplus"
       }
     },
     "time": {

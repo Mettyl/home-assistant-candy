@@ -98,6 +98,7 @@ class CandyClient:
         selection_level: int | None = None,
         temperature: int | None = None,
         spin_speed: int | None = None,
+        option_mask: int = 0,
         delay_minutes: int = 0,
     ) -> dict[str, str]:
         """Start a washing-machine program while it is in remote-control mode.
@@ -122,6 +123,7 @@ class CandyClient:
             selection_level=selection_level,
             temperature=temperature,
             spin_speed=spin_speed,
+            option_mask=option_mask,
             delay_minutes=delay_minutes,
         )
         _LOGGER.debug("Sending washing-machine start payload: %s", payload)
@@ -223,12 +225,14 @@ def build_washing_machine_start_payload(
     selection_level: int | None = None,
     temperature: int | None = None,
     spin_speed: int | None = None,
+    option_mask: int = 0,
     delay_minutes: int = 0,
 ) -> str:
     """Build the local Simply-Fi command payload for starting a wash."""
     _validate_command_value("program", program, 1, 255)
     _validate_command_value("program_code", program_code, 0, 999)
     _validate_command_value("delay_minutes", delay_minutes, 0, 1440)
+    _validate_command_value("option_mask", option_mask, 0, 255)
     if selection_level is not None:
         _validate_command_value("selection_level", selection_level, 0, 255)
     if temperature is not None:
@@ -247,6 +251,8 @@ def build_washing_machine_start_payload(
         fields["SLevTgt"] = selection_level
     if spin_speed is not None:
         fields["SpdTgt"] = spin_speed
+    if option_mask:
+        fields["OptMsk1"] = option_mask
     return urlencode(fields)
 
 

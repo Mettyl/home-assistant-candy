@@ -11,8 +11,14 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 from custom_components.candy.const import (
     CONF_ENABLE_WASH_CONTROL,
     DOMAIN,
+    UNIQUE_ID_WASH_ANTI_CREASE,
+    UNIQUE_ID_WASH_AQUAPLUS,
     UNIQUE_ID_WASH_DELAY_CONTROL,
+    UNIQUE_ID_WASH_EXTRA_RINSES_CONTROL,
+    UNIQUE_ID_WASH_GOOD_NIGHT,
+    UNIQUE_ID_WASH_HYGIENE,
     UNIQUE_ID_WASH_PAUSE,
+    UNIQUE_ID_WASH_PRE_WASH,
     UNIQUE_ID_WASH_PROGRAM_CONTROL,
     UNIQUE_ID_WASH_REFRESH_TOUCH,
     UNIQUE_ID_WASH_RESUME,
@@ -56,12 +62,18 @@ async def test_wash_control_selects(
     soil_id = _entity_id(
         hass, "select", UNIQUE_ID_WASH_SOIL_LEVEL_CONTROL.format(entry_id)
     )
+    rinses_id = _entity_id(
+        hass, "select", UNIQUE_ID_WASH_EXTRA_RINSES_CONTROL.format(entry_id)
+    )
+    aquaplus_id = _entity_id(hass, "switch", UNIQUE_ID_WASH_AQUAPLUS.format(entry_id))
     delay_id = _entity_id(hass, "time", UNIQUE_ID_WASH_DELAY_CONTROL.format(entry_id))
 
     assert hass.states.get(program_id).state == "Special 39'"
     assert hass.states.get(temperature_id).state == "40 °C"
     assert hass.states.get(spin_id).state == "800 rpm"
     assert hass.states.get(soil_id).state == "Program default"
+    assert hass.states.get(rinses_id).state == "Program default"
+    assert hass.states.get(aquaplus_id).state == "off"
     assert hass.states.get(delay_id).state == "unknown"
 
     await hass.services.async_call(
@@ -105,6 +117,13 @@ async def test_start_uses_selected_values(
     soil_id = _entity_id(
         hass, "select", UNIQUE_ID_WASH_SOIL_LEVEL_CONTROL.format(entry_id)
     )
+    rinses_id = _entity_id(
+        hass, "select", UNIQUE_ID_WASH_EXTRA_RINSES_CONTROL.format(entry_id)
+    )
+    pre_wash_id = _entity_id(hass, "switch", UNIQUE_ID_WASH_PRE_WASH.format(entry_id))
+    good_night_id = _entity_id(
+        hass, "switch", UNIQUE_ID_WASH_GOOD_NIGHT.format(entry_id)
+    )
     delay_id = _entity_id(hass, "time", UNIQUE_ID_WASH_DELAY_CONTROL.format(entry_id))
     start_id = _entity_id(hass, "button", UNIQUE_ID_WASH_START.format(entry_id))
 
@@ -133,6 +152,18 @@ async def test_start_uses_selected_values(
         blocking=True,
     )
     await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": pre_wash_id}, blocking=True
+    )
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": good_night_id}, blocking=True
+    )
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": rinses_id, "option": "+2 rinses"},
+        blocking=True,
+    )
+    await hass.services.async_call(
         "time",
         "set_value",
         {"entity_id": delay_id, "time": "07:15:00"},
@@ -152,6 +183,7 @@ async def test_start_uses_selected_values(
         selection_level=1,
         temperature=30,
         spin_speed=8,
+        option_mask=41,
         delay_minutes=0,
     )
 
@@ -200,8 +232,76 @@ async def test_schedule_uses_minutes_until_selected_wall_clock_time(
         selection_level=1,
         temperature=40,
         spin_speed=8,
+        option_mask=0,
         delay_minutes=75,
     )
+
+
+async def test_options_follow_selected_program(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+):
+    await init_integration(
+        hass,
+        aioclient_mock,
+        load_fixture("washing_machine/idle.json"),
+        enable_wash_control=True,
+    )
+    entry_id = hass.config_entries.async_entries(DOMAIN)[0].entry_id
+    program_id = _entity_id(
+        hass, "select", UNIQUE_ID_WASH_PROGRAM_CONTROL.format(entry_id)
+    )
+    rinses_id = _entity_id(
+        hass, "select", UNIQUE_ID_WASH_EXTRA_RINSES_CONTROL.format(entry_id)
+    )
+    option_ids = {
+        "pre_wash": _entity_id(
+            hass, "switch", UNIQUE_ID_WASH_PRE_WASH.format(entry_id)
+        ),
+        "hygiene": _entity_id(hass, "switch", UNIQUE_ID_WASH_HYGIENE.format(entry_id)),
+        "anti_crease": _entity_id(
+            hass, "switch", UNIQUE_ID_WASH_ANTI_CREASE.format(entry_id)
+        ),
+        "good_night": _entity_id(
+            hass, "switch", UNIQUE_ID_WASH_GOOD_NIGHT.format(entry_id)
+        ),
+        "aquaplus": _entity_id(
+            hass, "switch", UNIQUE_ID_WASH_AQUAPLUS.format(entry_id)
+        ),
+    }
+
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": program_id, "option": "Cotton"},
+        blocking=True,
+    )
+    assert hass.states.get(option_ids["pre_wash"]).state == "off"
+    assert hass.states.get(option_ids["hygiene"]).state == "off"
+    assert hass.states.get(option_ids["anti_crease"]).state == "unavailable"
+    assert hass.states.get(option_ids["good_night"]).state == "off"
+    assert hass.states.get(option_ids["aquaplus"]).state == "off"
+    assert hass.states.get(rinses_id).state == "Program default"
+
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": program_id, "option": "Synthetics"},
+        blocking=True,
+    )
+    assert hass.states.get(option_ids["hygiene"]).state == "unavailable"
+    assert hass.states.get(option_ids["anti_crease"]).state == "off"
+
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": program_id, "option": "Eco 40-60"},
+        blocking=True,
+    )
+    assert all(
+        hass.states.get(entity_id).state == "unavailable"
+        for entity_id in option_ids.values()
+    )
+    assert hass.states.get(rinses_id).state == "Program default"
 
 
 async def test_stop_uses_running_program(

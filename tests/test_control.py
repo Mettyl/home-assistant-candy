@@ -3,7 +3,16 @@
 from datetime import time
 
 from custom_components.candy.client.model import WashingMachineStatus
-from custom_components.candy.control import DEFAULT_OPTION, WashControlState
+from custom_components.candy.control import (
+    DEFAULT_OPTION,
+    WASH_OPTION_ANTI_CREASE,
+    WASH_OPTION_AQUAPLUS,
+    WASH_OPTION_GOOD_NIGHT,
+    WASH_OPTION_HYGIENE,
+    WASH_OPTION_PRE_WASH,
+    WASH_OPTION_RINSE_MASK,
+    WashControlState,
+)
 
 
 def _status(**overrides) -> WashingMachineStatus:
@@ -94,6 +103,36 @@ def test_synthetics_uses_verified_program_and_options():
         "Normal",
         "Heavy",
     ]
+    assert control.preset.supported_option_mask == (
+        WASH_OPTION_PRE_WASH
+        | WASH_OPTION_ANTI_CREASE
+        | WASH_OPTION_GOOD_NIGHT
+        | WASH_OPTION_RINSE_MASK
+        | WASH_OPTION_AQUAPLUS
+    )
+
+
+def test_washing_options_combine_and_reset_with_program():
+    control = WashControlState.from_status(_status())
+    control.select_program("Cotton")
+
+    assert control.supports_option(WASH_OPTION_HYGIENE)
+    assert not control.supports_option(WASH_OPTION_ANTI_CREASE)
+
+    control.set_option(WASH_OPTION_PRE_WASH, True)
+    control.set_option(WASH_OPTION_GOOD_NIGHT, True)
+    control.select_extra_rinses("+2 rinses")
+
+    assert control.option_mask == 41
+    assert control.extra_rinse_option == "+2 rinses"
+
+    control.select_extra_rinses("+1 rinse")
+    assert control.option_mask == 25
+
+    control.select_program("Eco 40-60")
+    assert control.option_mask == 0
+    assert control.extra_rinse_option == DEFAULT_OPTION
+    assert not control.supports_option(WASH_OPTION_PRE_WASH)
 
 
 def test_unverified_program_uses_fixed_default_soil_level():

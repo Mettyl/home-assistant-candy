@@ -26,7 +26,8 @@ which is based on
 - Native Home Assistant sensors for state, cycle, remaining time, and
   appliance-specific values.
 - Optional local controls verified on **Candy RO41274DWMSE/1-S**:
-  - program, temperature, spin-speed, and supported soil-level selection;
+  - program, temperature, spin-speed, soil-level, and compatible washing-option
+    selection;
   - start now or at a selected wall-clock time;
   - stop, pause, and resume;
   - post-cycle Refresh Touch.

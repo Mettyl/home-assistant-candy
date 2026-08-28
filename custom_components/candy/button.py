@@ -134,6 +134,7 @@ class CandyWashStartButton(CandyWashControlButton):
             selection_level=self.control.selected_soil_level,
             temperature=self.control.temperature,
             spin_speed=self.control.spin_speed,
+            option_mask=self.control.option_mask,
             delay_minutes=0,
         )
         await self.coordinator.async_request_refresh()
@@ -180,6 +181,7 @@ class CandyWashScheduleButton(CandyWashControlButton):
             selection_level=self.control.selected_soil_level,
             temperature=self.control.temperature,
             spin_speed=self.control.spin_speed,
+            option_mask=self.control.option_mask,
             delay_minutes=minutes_until_start(dt_util.now(), scheduled_time),
         )
         await self.coordinator.async_request_refresh()

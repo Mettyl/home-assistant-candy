@@ -62,10 +62,11 @@ def test_build_washing_machine_start_payload():
         selection_level=1,
         temperature=30,
         spin_speed=8,
+        option_mask=41,
     )
 
     assert payload == (
-        "Write=1&StSt=1&DelVl=0&PrNm=7&PrCode=7&TmpTgt=30&SLevTgt=1&SpdTgt=8"
+        "Write=1&StSt=1&DelVl=0&PrNm=7&PrCode=7&TmpTgt=30&SLevTgt=1&SpdTgt=8&OptMsk1=41"
     )
 
 
@@ -75,6 +76,13 @@ def test_build_washing_machine_start_payload_validates_values():
             program=7,
             program_code=7,
             selection_level=256,
+        )
+
+    with pytest.raises(ValueError, match="option_mask"):
+        build_washing_machine_start_payload(
+            program=7,
+            program_code=7,
+            option_mask=256,
         )
 
 
