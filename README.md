@@ -107,8 +107,9 @@ unverified model.
 
 ## License and attribution
 
-Distributed under the [MIT License](LICENSE.md). Original copyright and
-upstream attribution are preserved there.
+Distributed under the [MIT License](LICENSE.md). Copyright in upstream
+contributions remains with their respective authors; the project lineage is
+documented above.
 
 Special thanks to [Oliver Falvai](https://github.com/ofalvai) for the original
 integration and to [Fabio Mauro](https://github.com/bigmoby) for the upstream
