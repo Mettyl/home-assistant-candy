@@ -34,6 +34,17 @@ WASH_PROGRAMS: tuple[WashProgramPreset, ...] = (
     WashProgramPreset("Rapid 14'", 7, 7, 1, 30, 8, (0, 20, 30), (0, 4, 6, 8)),
     WashProgramPreset("Rapid 30'", 7, 7, 2, 30, 8, (0, 20, 30), (0, 4, 6, 8)),
     WashProgramPreset("Rapid 44'", 7, 7, 3, 30, 8, (0, 20, 30, 40), (0, 4, 6, 8)),
+    WashProgramPreset(
+        "Synthetics",
+        11,
+        3,
+        3,
+        40,
+        10,
+        (0, 20, 30, 40, 60),
+        (0, 4, 6, 8, 10),
+        (1, 2, 3),
+    ),
     WashProgramPreset("20 °C", 12, 11, 2, 20, 10, (20,), (0, 4, 6, 8, 10)),
     WashProgramPreset("Eco 40-60", 13, 2, 3, 0, 12, (40, 60), (0, 4, 6, 8, 10, 12)),
     WashProgramPreset(

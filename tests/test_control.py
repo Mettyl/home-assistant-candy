@@ -66,6 +66,36 @@ def test_cotton_offers_verified_soil_levels():
     assert control.selected_soil_level == 1
 
 
+def test_synthetics_uses_verified_program_and_options():
+    control = WashControlState.from_status(
+        _status(Pr="11", PrCode="3", SLevel="3", Temp="40", SpinSp="10")
+    )
+
+    assert control.preset.name == "Synthetics"
+    assert control.temperature_options == [
+        DEFAULT_OPTION,
+        "Cold",
+        "20 °C",
+        "30 °C",
+        "40 °C",
+        "60 °C",
+    ]
+    assert control.spin_speed_options == [
+        DEFAULT_OPTION,
+        "No spin",
+        "400 rpm",
+        "600 rpm",
+        "800 rpm",
+        "1000 rpm",
+    ]
+    assert control.soil_level_options == [
+        DEFAULT_OPTION,
+        "Light",
+        "Normal",
+        "Heavy",
+    ]
+
+
 def test_unverified_program_uses_fixed_default_soil_level():
     control = WashControlState.from_status(_status())
 
