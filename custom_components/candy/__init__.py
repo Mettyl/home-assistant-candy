@@ -31,8 +31,11 @@ from .client.model import (
     WashProgramState,
 )
 from .const import (
+    CONF_ENABLE_WASH_CONTROL,
     CONF_KEY_USE_ENCRYPTION,
+    DATA_KEY_CLIENT,
     DATA_KEY_COORDINATOR,
+    DATA_KEY_WASH_CONTROL,
     DOMAIN,
     PLATFORMS,
     UNIQUE_ID_DISHWASHER,
@@ -40,6 +43,7 @@ from .const import (
     UNIQUE_ID_TUMBLE_DRYER,
     UNIQUE_ID_WASHING_MACHINE,
 )
+from .control import WashControlState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -127,6 +131,7 @@ def _offline_washing_machine() -> WashingMachineStatus:
         program_state=WashProgramState.STOPPED,
         program=0,
         program_code=None,
+        selection_level=None,
         temp=0,
         spin_speed=0,
         remaining_minutes=0,
@@ -200,6 +205,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     session = async_get_clientsession(hass)
     client = CandyClient(session, ip_address, encryption_key, use_encryption)
+    config_entry.async_on_unload(config_entry.add_update_listener(_reload_entry))
 
     # Attempt to restore the last known status from HA's entity registry + state machine.
     # HA persists entity states in its recorder database and restores them on startup,
@@ -218,6 +224,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             async with async_timeout.timeout(40):
                 status = await client.status_with_retry()
                 _LOGGER.debug("Fetched status: %s", status)
+                entry_data = hass.data.get(DOMAIN, {}).get(config_entry.entry_id)
+                if entry_data is not None and isinstance(status, WashingMachineStatus):
+                    control = entry_data.get(DATA_KEY_WASH_CONTROL)
+                    if control is not None:
+                        control.sync_from_status(status)
                 last_known_status = status
                 return status
         except (TimeoutError, aiohttp.ClientError) as err:
@@ -245,9 +256,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = {
-        DATA_KEY_COORDINATOR: coordinator
+    entry_data = {
+        DATA_KEY_CLIENT: client,
+        DATA_KEY_COORDINATOR: coordinator,
     }
+    controls_enabled = config_entry.options.get(CONF_ENABLE_WASH_CONTROL, False)
+    if isinstance(coordinator.data, WashingMachineStatus) and controls_enabled:
+        entry_data[DATA_KEY_WASH_CONTROL] = WashControlState.from_status(
+            coordinator.data
+        )
+    hass.data.setdefault(DOMAIN, {})[config_entry.entry_id] = entry_data
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
@@ -258,6 +276,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        del hass.data[DOMAIN]
+        hass.data[DOMAIN].pop(entry.entry_id, None)
+        if not hass.data[DOMAIN]:
+            hass.data.pop(DOMAIN)
 
     return unload_ok
+
+
+async def _reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload an entry after its safety options change."""
+    await hass.config_entries.async_reload(entry.entry_id)

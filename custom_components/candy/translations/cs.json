@@ -1,0 +1,74 @@
+{
+  "options": {
+    "step": {
+      "init": {
+        "title": "Experimentální ovládání spotřebiče",
+        "description": "Povely zapněte pouze v případě, že jde přesně o pračku Candy RO41274DWMSE/1-S. Pro jiné modely nebyly příkazy ověřeny a nemusí být bezpečné.",
+        "data": {
+          "enable_wash_control": "Povolit ovládání pro RO41274DWMSE/1-S"
+        }
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "wash_start": {
+        "name": "Spustit praní"
+      },
+      "wash_schedule": {
+        "name": "Naplánovat praní"
+      },
+      "wash_stop": {
+        "name": "Zastavit praní"
+      },
+      "wash_pause": {
+        "name": "Pozastavit praní"
+      },
+      "wash_resume": {
+        "name": "Pokračovat v praní"
+      },
+      "wash_refresh_touch": {
+        "name": "Spustit Refresh Touch"
+      }
+    },
+    "select": {
+      "wash_program_control": {
+        "name": "Prací program"
+      },
+      "wash_temperature_control": {
+        "name": "Teplota praní"
+      },
+      "wash_spin_speed_control": {
+        "name": "Otáčky odstředění"
+      },
+      "wash_soil_level_control": {
+        "name": "Úroveň znečištění"
+      },
+      "wash_extra_rinses_control": {
+        "name": "Extra máchání"
+      }
+    },
+    "switch": {
+      "wash_pre_wash": {
+        "name": "Předpírka"
+      },
+      "wash_hygiene": {
+        "name": "Hygiena"
+      },
+      "wash_anti_crease": {
+        "name": "Proti pomačkání"
+      },
+      "wash_good_night": {
+        "name": "Noční režim"
+      },
+      "wash_aquaplus": {
+        "name": "Aquaplus"
+      }
+    },
+    "time": {
+      "wash_delay_control": {
+        "name": "Čas spuštění"
+      }
+    }
+  }
+}

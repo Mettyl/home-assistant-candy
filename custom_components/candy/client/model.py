@@ -53,6 +53,7 @@ class WashingMachineStatus:
     program_state: WashProgramState
     program: int
     program_code: int | None
+    selection_level: int | None
     temp: int
     spin_speed: int
     remaining_minutes: int
@@ -60,7 +61,7 @@ class WashingMachineStatus:
     fill_percent: int | None  # 0...100
     # Extended fields
     error: int | None  # Err — 0 means no error
-    delay_value: int | None  # DelVal — delay start value in hours
+    delay_value: int | None  # DelVal — remaining delayed-start time in minutes
     ntc_water: int | None  # NtcW — water NTC sensor (raw ADC)
     ntc_drum: int | None  # NtcD — drum NTC sensor (raw ADC)
     motor_speed_freq: int | None  # APSfreq — motor frequency
@@ -76,6 +77,7 @@ class WashingMachineStatus:
             program_state=WashProgramState.from_code(int(json["PrPh"])),
             program=int(json["Pr"]) if "Pr" in json else int(json["PrNm"]),
             program_code=int(json["PrCode"]) if "PrCode" in json else None,
+            selection_level=int(json["SLevel"]) if "SLevel" in json else None,
             temp=int(json["Temp"]),
             spin_speed=int(json["SpinSp"]) * 100,
             remaining_minutes=round(int(json["RemTime"]) / 60),

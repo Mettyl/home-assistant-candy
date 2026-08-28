@@ -3,10 +3,12 @@ from unittest.mock import AsyncMock, patch
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.candy import CONF_KEY_USE_ENCRYPTION, DOMAIN
 from custom_components.candy.client import Encryption
 from custom_components.candy.config_flow import MANUAL_IP_OPTION
+from custom_components.candy.const import CONF_ENABLE_WASH_CONTROL
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -264,3 +266,27 @@ async def test_discovery_no_devices_shows_manual_form(hass, no_discovery):
 
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "user"
+
+
+async def test_options_require_explicit_control_opt_in(hass):
+    """Test that appliance controls are disabled by default and can be enabled."""
+    entry = MockConfigEntry(
+        data={},
+        domain=DOMAIN,
+        options={},
+        source=config_entries.SOURCE_USER,
+        title="Candy",
+        unique_id="123-456",
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={CONF_ENABLE_WASH_CONTROL: True}
+    )
+
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result["data"] == {CONF_ENABLE_WASH_CONTROL: True}

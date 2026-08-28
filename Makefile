@@ -23,7 +23,7 @@ lint: lint-ruff lint-mypy ## Run all linting checks
 
 lint-ruff: ## Run ruff linting
 	@echo "🔍 Running ruff linting..."
-	@bash -c "source venv/bin/activate && python3 -m ruff check custom_components/candy/"
+	@bash -c "source venv/bin/activate && python3 -m ruff check custom_components/candy/ tests/"
 
 lint-mypy: ## Run mypy type checking
 	@echo "🔍 Running mypy type checking..."
@@ -31,13 +31,13 @@ lint-mypy: ## Run mypy type checking
 
 format: ## Format code
 	@echo "✨ Formatting code..."
-	@bash -c "source venv/bin/activate && python3 -m ruff format custom_components/candy/"
-	@bash -c "source venv/bin/activate && python3 -m ruff check --fix custom_components/candy/"
+	@bash -c "source venv/bin/activate && python3 -m ruff format custom_components/candy/ tests/"
+	@bash -c "source venv/bin/activate && python3 -m ruff check --fix custom_components/candy/ tests/"
 
 format-ruff: ## Format code with ruff
 	@echo "✨ Formatting code with ruff..."
-	@bash -c "source venv/bin/activate && python3 -m ruff format custom_components/candy/"
-	@bash -c "source venv/bin/activate && python3 -m ruff check --fix custom_components/candy/"
+	@bash -c "source venv/bin/activate && python3 -m ruff format custom_components/candy/ tests/"
+	@bash -c "source venv/bin/activate && python3 -m ruff check --fix custom_components/candy/ tests/"
 
 pre-commit-install: ## Install pre-commit hooks
 	@echo "🔧 Installing pre-commit hooks..."
@@ -76,6 +76,6 @@ develop: ## Start Home Assistant with this integration loaded (requires HA insta
 	@echo "🔧 Starting Home Assistant in development mode..."
 	@./scripts/develop
 
-check: lint-ruff test ## Run all checks (lint + test)
+check: lint test ## Run all checks (lint + type checking + test)
 
 ci: setup check ## Run CI pipeline locally

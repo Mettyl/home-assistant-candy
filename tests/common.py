@@ -3,6 +3,7 @@ from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.candy import CONF_KEY_USE_ENCRYPTION, DOMAIN
+from custom_components.candy.const import CONF_ENABLE_WASH_CONTROL
 
 TEST_IP = "192.168.0.66"
 TEST_ENCRYPTION_KEY_EMPTY = ""
@@ -15,7 +16,13 @@ TEST_UNENCRYPTED_HEX_RESPONSE = """
 """
 
 
-async def init_integration(hass: HomeAssistant, aioclient_mock, status_response: str):
+async def init_integration(
+    hass: HomeAssistant,
+    aioclient_mock,
+    status_response: str,
+    *,
+    enable_wash_control: bool = False,
+):
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="123-456",
@@ -24,6 +31,7 @@ async def init_integration(hass: HomeAssistant, aioclient_mock, status_response:
             CONF_KEY_USE_ENCRYPTION: False,
             CONF_PASSWORD: "",
         },
+        options={CONF_ENABLE_WASH_CONTROL: enable_wash_control},
     )
 
     aioclient_mock.get(
